@@ -1,0 +1,9 @@
+# Install torch/torchvision separately using https://pytorch.org/get-started/locally/
+datasets>=3.0
+huggingface_hub
+numpy
+pandas
+matplotlib
+Pillow
+scikit-image
+tqdm
