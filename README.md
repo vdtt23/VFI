@@ -8,10 +8,10 @@ Course project implementation:
 
 ## 1. Environment (Windows)
 
-Use Python 3.11 and a virtual environment:
+Use Python 3.12 and a virtual environment:
 
 ```powershell
-py -3.11 -m venv .venv
+py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip setuptools wheel
 ```
@@ -101,7 +101,98 @@ Outputs:
 - `results/figures/baseline_*.png`
 - `results/figures/unet_*.png`
 
-## 6. Project caveats
+## 6. Check checkpoints
+
+To check whether both training checkpoints exist, can be loaded, and match the
+current U-Net architecture:
+
+```powershell
+python check_checkpoints.py
+```
+
+The script checks:
+- `checkpoints/best_model.pth`
+- `checkpoints/last_model.pth`
+- checkpoint structure and model weights
+- compatibility with `FrameInterpolationUNet`
+- saved epoch, validation loss and model configuration
+
+To check checkpoints in another directory:
+
+```powershell
+python check_checkpoints.py --checkpoint-dir experiments\run_01\checkpoints
+```
+
+## 7. Experiments and resume training
+
+Training creates separate folders based on `experiment_name`:
+
+```text
+checkpoints/
+  experiment_5000/
+  experiment_15000/
+results/
+  experiment_5000/
+  experiment_15000/
+```
+
+Start a completely new 5,000-triplet experiment:
+
+```powershell
+python train.py --experiment-name experiment_5000 --epochs 15
+```
+
+Start a completely new 15,000-triplet experiment:
+
+```powershell
+python train.py --experiment-name experiment_15000 --epochs 15
+```
+
+The experiment name is independent of `MAX_TRIPLETS` in `config.py`. Set
+`MAX_TRIPLETS` when preparing a dataset, but training does not automatically
+download or prepare data.
+
+Resume the 15,000 experiment from its own last checkpoint:
+
+```powershell
+python train.py --experiment-name experiment_15000 --epochs 30 --resume
+```
+
+Continue the weights from the 5,000-triplet experiment into the 15,000-triplet
+experiment:
+
+```powershell
+python train.py --experiment-name experiment_15000 --epochs 30 --resume-from checkpoints\experiment_5000\last_model.pth
+```
+
+Resume also works through `config.py`:
+
+```python
+RESUME_TRAINING = True
+RESUME_FROM_CHECKPOINT = "checkpoints/experiment_5000/last_model.pth"
+```
+
+Resume loads model and optimizer state, restores GradScaler state when present,
+and starts after the checkpoint's completed epoch. Legacy checkpoints without
+`scaler_state_dict` are supported and receive a newly initialized GradScaler.
+
+When continuing onto a larger dataset, the project prints a warning because
+new data or a new train/validation/test split changes the training distribution.
+The script does not regenerate or delete splits.
+
+Evaluate a specific experiment:
+
+```powershell
+python evaluate.py --experiment-name experiment_15000 --checkpoint best_model.pth
+```
+
+Evaluate another checkpoint directory explicitly:
+
+```powershell
+python evaluate.py --checkpoint-dir checkpoints\experiment_15000 --checkpoint last_model.pth
+```
+
+## 8. Project caveats
 
 1. The Hugging Face repository has a single `train` split; this project creates
    its own train/validation/test split from the selected subset.
