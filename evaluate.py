@@ -9,7 +9,8 @@ from config import (
     DEVICE, BATCH_SIZE, NUM_WORKERS, PIN_MEMORY,
     BASE_CHANNELS, CHECKPOINT_DIR, METRICS_DIR,
     FIGURES_DIR, NUM_VISUALIZATION_SAMPLES, USE_AMP,
-    PROJECT_ROOT, RESULTS_DIR, EXPERIMENT_NAME
+    PROJECT_ROOT, RESULTS_DIR, EXPERIMENT_NAME, MAX_TRIPLETS,
+    TRAIN_RATIO, VAL_RATIO,
 )
 from data_loader.vimeo_dataset import VimeoTripletDataset
 from models.unet import FrameInterpolationUNet
@@ -109,7 +110,14 @@ def main():
     metrics_dir.mkdir(parents=True, exist_ok=True)
     figures_dir.mkdir(parents=True, exist_ok=True)
 
-    test_ds = VimeoTripletDataset(split="test", augment=False)
+    expected_test = MAX_TRIPLETS - int(MAX_TRIPLETS * TRAIN_RATIO) - int(
+        MAX_TRIPLETS * VAL_RATIO
+    )
+    test_ds = VimeoTripletDataset(
+        split="test",
+        augment=False,
+        max_samples=expected_test,
+    )
     test_loader = DataLoader(
         test_ds,
         batch_size=BATCH_SIZE,

@@ -16,11 +16,12 @@ from config import (
     CHECKPOINT_DIR, RESULTS_DIR, FIGURES_DIR, SEED,
     MAX_TRAIN_BATCHES, MAX_TRIPLETS, TRIPLETS_DIR, SPLITS_DIR,
     PROJECT_ROOT, EXPERIMENT_NAME, RESUME_TRAINING,
-    RESUME_FROM_CHECKPOINT,
+    RESUME_FROM_CHECKPOINT, TRAIN_RATIO, VAL_RATIO,
 )
 from data_loader.vimeo_dataset import VimeoTripletDataset
 from models.unet import FrameInterpolationUNet
 from utils.visualization import save_training_curves
+from experiment_logger import log_epoch, log_experiment
 
 
 def seed_everything(seed):
@@ -146,6 +147,15 @@ def check_dataset_size():
             )
 
     if split_counts:
+        total_split = sum(split_counts.values())
+        if total_split != MAX_TRIPLETS:
+            print(
+                "WARNING: Split file total "
+                f"({total_split}) differs from MAX_TRIPLETS "
+                f"({MAX_TRIPLETS}). "
+                "Training will use the configured proportion from existing "
+                "split files. Existing splits are not being modified."
+            )
         print(
             "Current split counts: "
             + ", ".join(f"{name}={count}" for name, count in split_counts.items())
@@ -309,6 +319,7 @@ def upsert_epoch(history, epoch_record):
 
 def main():
     args = parse_args()
+    total_training_time = 0.0
     seed_everything(SEED)
     experiment_name = args.experiment_name
     experiment_checkpoint_dir = CHECKPOINT_DIR / experiment_name
@@ -329,8 +340,19 @@ def main():
     if DEVICE.type == "cuda":
         print("GPU:", torch.cuda.get_device_name(0))
 
-    train_ds = VimeoTripletDataset(split="train", augment=True)
-    val_ds = VimeoTripletDataset(split="val", augment=False)
+    expected_train = int(MAX_TRIPLETS * TRAIN_RATIO)
+    expected_val = int(MAX_TRIPLETS * VAL_RATIO)
+
+    train_ds = VimeoTripletDataset(
+        split="train",
+        augment=True,
+        max_samples=expected_train,
+    )
+    val_ds = VimeoTripletDataset(
+        split="val",
+        augment=False,
+        max_samples=expected_val,
+    )
 
     train_loader = make_loader(train_ds, shuffle=True)
     val_loader = make_loader(val_ds, shuffle=False)
@@ -350,6 +372,7 @@ def main():
     history = load_history(history_path, experiment_name)
     completed_epoch = 0
     best_val = float("inf")
+    best_train = float("inf")
 
     resume_requested = args.resume or RESUME_TRAINING
     if resume_requested:
@@ -414,6 +437,8 @@ def main():
         val_loss = run_validation(model, val_loader, criterion)
 
         elapsed = time.time() - start
+        total_training_time += elapsed
+        best_train = min(best_train, train_loss)
         print(
             f"Epoch {epoch}: train={train_loss:.6f}, "
             f"val={val_loss:.6f}, time={elapsed:.1f}s"
@@ -458,9 +483,29 @@ def main():
         save_training_curves(
             history, experiment_figure_dir / "training_curves.png"
         )
+        log_epoch(
+            experiment_name,
+            epoch,
+            train_loss,
+            val_loss,
+            elapsed,
+        )
 
     print("Training finished.")
     print("Best validation L1:", best_val)
+    log_experiment(
+        config=experiment_name,
+        triplets=MAX_TRIPLETS,
+        epochs=args.epochs,
+        batch_size=BATCH_SIZE,
+        lr=LEARNING_RATE,
+        train_l1=best_train,
+        val_l1=best_val,
+        psnr=None,
+        ssim=None,
+        total_time=total_training_time,
+        checkpoint=str(experiment_checkpoint_dir / "best_model.pth"),
+    )
 
 
 if __name__ == "__main__":
