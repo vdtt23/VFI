@@ -17,6 +17,7 @@ from models.unet import FrameInterpolationUNet
 from baseline import linear_blending
 from utils.metrics import batch_psnr, batch_ssim
 from utils.visualization import save_comparison
+from experiment_logger import log_evaluation
 
 
 def evaluate_model(model, loader, figures_dir, use_baseline=False):
@@ -171,6 +172,14 @@ def main():
     for name, psnr, ssim in rows:
         print(f"{name:20s} PSNR={psnr:.4f} dB | SSIM={ssim:.4f}")
 
+    log_evaluation(
+        config=experiment_name,
+        baseline_psnr=base_psnr,
+        baseline_ssim=base_ssim,
+        unet_psnr=unet_psnr,
+        unet_ssim=unet_ssim,
+    )
+    print("Updated experiment_results.xlsx")
     print(f"Saved metrics to {metrics_path}")
 
 

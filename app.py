@@ -20,7 +20,7 @@ st.set_page_config(
 st.title("Video Frame Interpolation")
 st.caption("U-Net · Vimeo-90K Triplet · PyTorch")
 
-DEFAULT_CHECKPOINT = "checkpoints/best_model.pth"
+DEFAULT_CHECKPOINT = "checkpoints/experiment_45000/best_model.pth"
 
 
 @st.cache_resource
@@ -240,12 +240,23 @@ if uploaded_file is not None:
 
                 with left:
                     st.subheader("Video gốc")
-                    st.video(uploaded_file)
+                    st.video(
+                        uploaded_file,
+                        start_time=0,
+                        autoplay=True,
+                        muted=True,
+                    )
                     st.caption(f"{info['source_fps']:.2f} FPS")
 
                 with right:
                     st.subheader("Video sau nội suy")
-                    st.video(output_bytes, format="video/mp4")
+                    st.video(
+                        output_bytes,
+                        format="video/mp4",
+                        start_time=0,
+                        autoplay=True,
+                        muted=True,
+                    )
                     st.caption(f"{info['output_fps']:.2f} FPS · H.264")
 
                 st.subheader("Thông tin xử lý")

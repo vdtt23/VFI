@@ -19,13 +19,19 @@ import torch
 from models.unet import FrameInterpolationUNet as UNet
 
 HEIGHT, WIDTH = 256, 448
+CHECKPOINT_ROOT = Path("checkpoints")
 
 
 def parse_args():
     p = argparse.ArgumentParser(description="Interpolate video with trained U-Net")
     p.add_argument("--input", required=True, help="Input video")
     p.add_argument("--output", default="results/interpolated_video.mp4")
-    p.add_argument("--checkpoint", default="checkpoints/best_model.pth")
+    p.add_argument(
+        "--checkpoint",
+        default=None,
+        help="Checkpoint path; defaults to the most recently modified .pth file "
+        "under checkpoints/",
+    )
     p.add_argument("--device", choices=["auto", "cuda", "cpu"], default="auto")
     p.add_argument(
         "--keep-fps",
@@ -34,6 +40,18 @@ def parse_args():
     )
     p.add_argument("--codec", default="mp4v")
     return p.parse_args()
+
+
+def find_latest_checkpoint(checkpoint_root=CHECKPOINT_ROOT):
+    checkpoints = [
+        path for path in checkpoint_root.rglob("*.pth")
+        if path.is_file()
+    ]
+    if not checkpoints:
+        raise FileNotFoundError(
+            f"No .pth checkpoints found under: {checkpoint_root}"
+        )
+    return max(checkpoints, key=lambda path: path.stat().st_mtime)
 
 
 def build_model():
@@ -148,8 +166,13 @@ def main():
     if device.type == "cuda":
         print(f"GPU: {torch.cuda.get_device_name(0)}")
 
-    model = load_model(args.checkpoint, device)
-    print(f"Loaded checkpoint: {args.checkpoint}")
+    checkpoint_path = (
+        Path(args.checkpoint)
+        if args.checkpoint
+        else find_latest_checkpoint()
+    )
+    model = load_model(checkpoint_path, device)
+    print(f"Loaded checkpoint: {checkpoint_path}")
 
     cap = cv2.VideoCapture(str(input_path))
     if not cap.isOpened():

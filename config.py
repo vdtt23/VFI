@@ -15,7 +15,7 @@ METRICS_DIR = RESULTS_DIR / "metrics"
 HF_DATASET_ID = "danjacobellis/vimeo90k_triplet"
 
 # Data preparation
-MAX_TRIPLETS = 5000       # Start small; increase after pipeline works
+MAX_TRIPLETS = 30000       # Start small; increase after pipeline works
 TRAIN_RATIO = 0.80
 VAL_RATIO = 0.10
 SPLIT_SEED = 42
@@ -38,7 +38,7 @@ MAX_TRAIN_BATCHES = None   # Set e.g. 50 for a quick smoke test; None = full epo
 
 # Experiment and resume settings
 EXPERIMENT_NAME = f"experiment_{MAX_TRIPLETS}"
-RESUME_TRAINING = False  # Set to True to resume training from a checkpoint
+RESUME_TRAINING = True  # Set to True to resume training from a checkpoint
 RESUME_FROM_CHECKPOINT = None  # Example: "checkpoints/experiment_5000/last_model.pth"
 
 # Model

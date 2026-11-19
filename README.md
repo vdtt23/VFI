@@ -100,30 +100,9 @@ Outputs:
 - `results/metrics/test_metrics.csv`
 - `results/figures/baseline_*.png`
 - `results/figures/unet_*.png`
+- `experiment_results.xlsx` (Linear Blending and U-Net PSNR/SSIM)
 
-## 6. Check checkpoints
-
-To check whether both training checkpoints exist, can be loaded, and match the
-current U-Net architecture:
-
-```powershell
-python check_checkpoints.py
-```
-
-The script checks:
-- `checkpoints/best_model.pth`
-- `checkpoints/last_model.pth`
-- checkpoint structure and model weights
-- compatibility with `FrameInterpolationUNet`
-- saved epoch, validation loss and model configuration
-
-To check checkpoints in another directory:
-
-```powershell
-python check_checkpoints.py --checkpoint-dir experiments\run_01\checkpoints
-```
-
-## 7. Experiments and resume training
+## 6. Experiments and resume training
 
 Training creates separate folders based on `experiment_name`:
 
@@ -192,7 +171,47 @@ Evaluate another checkpoint directory explicitly:
 python evaluate.py --checkpoint-dir checkpoints\experiment_15000 --checkpoint last_model.pth
 ```
 
-## 8. Project caveats
+## 7. Interpolate video
+
+Run the command-line video interpolation script:
+
+```powershell
+python interpolate_video.py `
+  --input input.mp4 `
+  --output results\interpolated_video.mp4
+```
+
+When `--checkpoint` is omitted, the script automatically uses the most recently
+modified `.pth` file under `checkpoints/`. To select a checkpoint explicitly:
+
+```powershell
+python interpolate_video.py `
+  --input input.mp4 `
+  --output results\interpolated_video.mp4 `
+  --checkpoint checkpoints\experiment_45000\last_model.pth
+```
+
+By default, the output FPS is doubled so the output duration is approximately
+unchanged. Add `--keep-fps` to keep the original FPS instead.
+
+## 8. Run the Streamlit app
+
+Start the web interface:
+
+```powershell
+streamlit run app.py
+```
+
+Then open the local URL shown by Streamlit, upload a video, select the
+checkpoint path in the sidebar, choose the device, and click **Nội suy video**.
+For the latest checkpoint, use the same path selected by the command-line
+script, for example:
+
+```text
+checkpoints\experiment_45000\last_model.pth
+```
+
+## 9. Project caveats
 
 1. The Hugging Face repository has a single `train` split; this project creates
    its own train/validation/test split from the selected subset.
